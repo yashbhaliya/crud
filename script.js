@@ -23,10 +23,9 @@ const clearBtn = document.querySelector(".f-button.clear");
 const delAllBox = document.getElementById("del-all-box");
 
 let userData = [];
-let currentEmployeeId = null;
 let originalEmployee = null;
 
-/* ================= MODAL ================= */
+// -------------------- MODAL HANDLING --------------------
 addbtn.onclick = () => {
     modal.classList.add("active");
     registerForm.reset();
@@ -34,29 +33,19 @@ addbtn.onclick = () => {
 
 closeBtn.onclick = () => modal.classList.remove("active");
 
-const closeViewBtn = document.querySelector(".view-modal .close-icon");
-if (closeViewBtn) {
-    closeViewBtn.onclick = () => {
+document.querySelectorAll(".view-modal .close-icon").forEach(btn => {
+    btn.onclick = () => {
         document.querySelector(".view-modal").classList.remove("active");
-        // Reset modal state to edit mode
-        document.getElementById("view-Name").disabled = false;
-        document.getElementById("view-E-mail").disabled = false;
-        document.getElementById("view-Password").type = "text";
-        document.getElementById("view-Password").disabled = false;
-        document.getElementById("view-Office-Code").disabled = false;
-        document.getElementById("view-Job-Title").disabled = false;
-        document.getElementById("view-profilePic").style.display = "block";
-        document.getElementById("view-update-btn").style.display = "block";
     };
-}
+});
 
-/* ================= VALIDATION ================= */
+// -------------------- FORM VALIDATION --------------------
 function validateForm() {
     if (!nameEl.value || !emailEl.value || !passwordEl.value || !officecodeEl.value || !jobTitleEl.value) return false;
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailEl.value);
 }
 
-/* ================= IMAGE COMPRESSION ================= */
+// -------------------- IMAGE COMPRESSION --------------------
 function compressImage(file, width, height, callback) {
     const reader = new FileReader();
     reader.onload = function (e) {
@@ -73,7 +62,7 @@ function compressImage(file, width, height, callback) {
     reader.readAsDataURL(file);
 }
 
-/* ================= ADD EMPLOYEE ================= */
+// -------------------- ADD EMPLOYEE --------------------
 registerForm.onsubmit = async (e) => {
     e.preventDefault();
     if (isSubmitting) return;
@@ -123,7 +112,7 @@ registerForm.onsubmit = async (e) => {
     });
 };
 
-/* ================= FETCH EMPLOYEES ================= */
+// -------------------- FETCH EMPLOYEES --------------------
 async function getDataFromDB() {
     try {
         const res = await fetch(API);
@@ -144,7 +133,7 @@ async function getDataFromDB() {
                     <td>
                         <i class="fa fa-eye view-btn"></i>
                         <i class="fa fa-edit edit-btn"></i>
-                        <i class="fa fa-trash"></i>
+                        <i class="fa fa-trash del-btn"></i>
                     </td>
                 </tr>`;
         });
@@ -158,9 +147,9 @@ async function getDataFromDB() {
 
 getDataFromDB();
 
-/* ================= DELETE EMPLOYEE ================= */
+// -------------------- DELETE EMPLOYEE --------------------
 function setupDeleteButtons() {
-    document.querySelectorAll(".fa-trash").forEach(btn => {
+    document.querySelectorAll(".del-btn").forEach(btn => {
         btn.onclick = async function () {
             const id = this.closest("tr").cells[2].textContent;
             if (!confirm("Are you sure you want to delete this employee?")) return;
@@ -171,71 +160,24 @@ function setupDeleteButtons() {
     });
 }
 
-/* ================= VIEW / UPDATE EMPLOYEE ================= */
+// -------------------- VIEW / EDIT EMPLOYEE --------------------
 function setupActionButtons() {
-    // View buttons (read-only)
     document.querySelectorAll(".view-btn").forEach(btn => {
         btn.onclick = () => {
             const id = btn.closest("tr").cells[2].textContent;
             const emp = userData.find(e => e._id == id);
             if (!emp) return;
-
-            // Populate fields
-            document.getElementById("view-Id").value = emp._id;
-            document.getElementById("view-Name").value = emp.name;
-            document.getElementById("view-E-mail").value = emp.email;
-            document.getElementById("view-Password").type = "password";
-            document.getElementById("view-Password").value = "*****";
-            document.getElementById("view-Office-Code").value = emp.officecode;
-            document.getElementById("view-Job-Title").value = emp.jobTitle;
-            document.getElementById("view-profile").src = emp.profile;
-
-            // Disable all inputs for view mode
-            document.getElementById("view-Name").disabled = true;
-            document.getElementById("view-E-mail").disabled = true;
-            document.getElementById("view-Password").disabled = true;
-            document.getElementById("view-Office-Code").disabled = true;
-            document.getElementById("view-Job-Title").disabled = true;
-            document.getElementById("view-profilePic").style.display = "none";
-
-            // Hide update button
-            document.getElementById("view-update-btn").style.display = "none";
-
-            document.querySelector(".view-modal").classList.add("active");
+            openViewModal(emp, false);
         };
     });
 
-    // Edit buttons
     document.querySelectorAll(".edit-btn").forEach(btn => {
         btn.onclick = () => {
             const id = btn.closest("tr").cells[2].textContent;
             const emp = userData.find(e => e._id == id);
             if (!emp) return;
-
             originalEmployee = { ...emp };
-
-            // Populate fields
-            document.getElementById("view-Id").value = emp._id;
-            document.getElementById("view-Name").value = emp.name;
-            document.getElementById("view-E-mail").value = emp.email;
-            document.getElementById("view-Password").type = "text";
-            document.getElementById("view-Password").value = emp.password || '';
-            document.getElementById("view-Office-Code").value = emp.officecode;
-            document.getElementById("view-Job-Title").value = emp.jobTitle;
-            document.getElementById("view-profile").src = emp.profile;
-
-            // Enable all inputs for edit mode
-            document.getElementById("view-Name").disabled = false;
-            document.getElementById("view-E-mail").disabled = false;
-            document.getElementById("view-Password").disabled = false;
-            document.getElementById("view-Office-Code").disabled = false;
-            document.getElementById("view-Job-Title").disabled = false;
-            document.getElementById("view-profilePic").style.display = "block";
-
-            // Show update button
-            document.getElementById("view-update-btn").style.display = "block";
-
-            document.querySelector(".view-modal").classList.add("active");
+            openViewModal(emp, true);
         };
     });
 }
@@ -248,20 +190,16 @@ const viewJobEl = document.getElementById("view-Job-Title");
 const viewProfileInput = document.getElementById("view-profilePic");
 const viewProfileImg = document.getElementById("view-profile");
 
-
 viewUpdateBtn.onclick = async () => {
     const id = document.getElementById("view-Id").value;
     const updatedData = {};
 
-    // Check which text fields have changed
     if (viewNameEl.value !== originalEmployee.name) updatedData.name = viewNameEl.value;
     if (viewEmailEl.value !== originalEmployee.email) updatedData.email = viewEmailEl.value;
-    // Password is only updated if user enters a new value
     if (viewPasswordEl.value) updatedData.password = viewPasswordEl.value;
     if (viewOfficeEl.value !== originalEmployee.officecode) updatedData.officecode = viewOfficeEl.value;
     if (viewJobEl.value !== originalEmployee.jobTitle) updatedData.jobTitle = viewJobEl.value;
 
-    // Handle profile update
     if (viewProfileInput.files[0]) {
         compressImage(viewProfileInput.files[0], 150, 150, async (img) => {
             updatedData.profile = img;
@@ -289,39 +227,28 @@ async function updateEmployee(id, updatedData) {
             document.querySelector(".view-modal").classList.remove("active");
             getDataFromDB();
         } else {
-            console.log("Update failed - Status:", res.status);
             const errorText = await res.text();
-            console.log("Error response:", errorText);
-            let errorMessage = res.statusText;
-            try {
-                const errorData = JSON.parse(errorText);
-                errorMessage = errorData.error || errorData.message || errorMessage;
-            } catch (e) {
-                errorMessage = errorText || errorMessage;
-            }
-            swal("Error!", `Failed to update employee: ${errorMessage}`, "error");
+            swal("Error!", `Failed to update employee: ${errorText}`, "error");
         }
     } catch (err) {
         swal("Error!", "Error occurred while updating employee", "error");
     }
 }
 
-/* ================= SEARCH ================= */
-searchEl.oninput = searchFuc;
-function searchFuc() {
+// -------------------- SEARCH --------------------
+searchEl.oninput = () => {
     const filter = searchEl.value.toLowerCase();
     tableBody.querySelectorAll("tr").forEach(row => {
         row.style.display = row.innerText.toLowerCase().includes(filter) ? "" : "none";
     });
-}
+};
 
-/* ================= DELETE ALL ================= */
+// -------------------- DELETE ALL --------------------
 clearBtn.onclick = async () => {
     if (!delAllBox.checked) {
         swal("Warning", "Check the box first", "warning");
         return;
     }
-
     if (!confirm("Are you sure you want to delete ALL employees?")) return;
 
     await fetch(API, { method: "DELETE" });
@@ -330,8 +257,48 @@ clearBtn.onclick = async () => {
     getDataFromDB();
 };
 
-delAllBox.onclick = function () {
-    if (delAllBox.checked) {
-        swal("Warning", "You are about to delete ALL employee records", "warning");
+delAllBox.onclick = () => {
+    if (delAllBox.checked) swal("Warning", "You are about to delete ALL employee records", "warning");
+};
+
+// -------------------- PASSWORD TOGGLE --------------------
+const toggleEye = document.getElementById("togglePassword");
+toggleEye.onclick = () => {
+    if (viewPasswordEl.type === "password") {
+        viewPasswordEl.type = "text";
+        toggleEye.classList.replace("fa-eye", "fa-eye-slash");
+    } else {
+        viewPasswordEl.type = "password";
+        toggleEye.classList.replace("fa-eye-slash", "fa-eye");
     }
 };
+
+// -------------------- OPEN VIEW/EDIT MODAL --------------------
+function openViewModal(emp, isEdit = false) {
+    document.getElementById("view-Id").value = emp._id;
+    document.getElementById("view-Name").value = emp.name;
+    document.getElementById("view-E-mail").value = emp.email;
+
+    // IMPORTANT: password field EMPTY
+    document.getElementById("view-Password").value = "";
+    document.getElementById("view-Password").type = "password";
+
+    document.getElementById("view-Office-Code").value = emp.officecode;
+    document.getElementById("view-Job-Title").value = emp.jobTitle;
+    document.getElementById("view-profile").src = emp.profile;
+
+    document.getElementById("view-Name").disabled = !isEdit;
+    document.getElementById("view-E-mail").disabled = !isEdit;
+    document.getElementById("view-Password").disabled = !isEdit;
+    document.getElementById("view-Office-Code").disabled = !isEdit;
+    document.getElementById("view-Job-Title").disabled = !isEdit;
+
+    document.getElementById("view-profilePic").style.display = isEdit ? "block" : "none";
+    document.getElementById("view-update-btn").style.display = isEdit ? "block" : "none";
+
+    document.querySelector(".view-modal").classList.add("active");
+}
+
+
+// -------------------- ON LOAD --------------------
+window.onload = getDataFromDB;

@@ -1,85 +1,75 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
-const bcrypt = require("bcrypt");
 
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: "5mb" }));
 
+// -------------------- MONGODB CONNECTION --------------------
 mongoose.connect(
-"mongodb+srv://yash:yash%40123@cluster0.uelkdir.mongodb.net/EMP?appName=Cluster0")
+    "mongodb+srv://yash:yash%40123@cluster0.uelkdir.mongodb.net/EMP?appName=Cluster0"
+)
     .then(() => console.log("MongoDB Atlas Connected"))
     .catch(err => console.log("MongoDB Connection Error:", err));
 
-/* EMPLOYEE */
+// -------------------- EMPLOYEE SCHEMA --------------------
 const employeeSchema = new mongoose.Schema({
-    name: String,
-    email: String,
-    password: String,
+    name: { type: String, required: true },
+    email: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
     officecode: String,
     jobTitle: String,
     profile: String
 });
+
 const Employee = mongoose.model("Employee", employeeSchema);
 
-/* GET ALL EMPLOYEES */
+// -------------------- GET ALL EMPLOYEES --------------------
 app.get("/employees", async (req, res) => {
     try {
-        const employees = await Employee.find().select('-password');
+        const employees = await Employee.find(); // 👈 NO .select('-password')
         res.json(employees);
     } catch (err) {
-        res.status(500).json(err);
+        res.status(500).json({ error: err.message });
     }
 });
 
-/* CREATE EMPLOYEE */
+
+// -------------------- CREATE EMPLOYEE --------------------
 app.post("/employees", async (req, res) => {
     try {
-        const saltRounds = 10;
-        const hashedPassword = await bcrypt.hash(req.body.password, saltRounds);
+        const existingUser = await Employee.findOne({ email: req.body.email });
+
+        if (existingUser) {
+            return res.status(400).json({
+                success: false,
+                message: "Email already exists"
+            });
+        }
 
         const emp = new Employee({
             name: req.body.name,
             email: req.body.email,
-            password: hashedPassword,
+            password: req.body.password, // plain text (as you want)
             officecode: req.body.officecode,
             jobTitle: req.body.jobTitle,
             profile: req.body.profile
         });
 
-        const savedEmp = await emp.save();
-        res.json({ success: true, id: savedEmp._id });
+        await emp.save();
+        res.json({ success: true });
     } catch (err) {
-        res.status(500).json(err);
+        console.error(err);
+        res.status(500).json({ error: err.message });
     }
 });
 
-// /* UPDATE EMPLOYEE */
-// app.put("/employees/:id", async (req, res) => {
-//     try {
-//         console.log("Updating employee with id:", req.params.id);
-//         console.log("Update data:", req.body);
-//         const result = await Employee.findOneAndUpdate(
-//             { _id: req.params.id },
-//             req.body
-//         );
-//         console.log("Update result:", result);
-//         res.json({ success: true });
-//     } catch (err) {
-//         console.log("Update error:", err);
-//         res.status(500).json({ error: err.message });
-//     }
-// });
 
+// -------------------- UPDATE EMPLOYEE --------------------
 app.put("/employees/:id", async (req, res) => {
     try {
-        const updateData = { ...req.body };
-        if (req.body.password) {
-            const saltRounds = 10;
-            updateData.password = await bcrypt.hash(req.body.password, saltRounds);
-        }
-        await Employee.findByIdAndUpdate(req.params.id, updateData);
+        await Employee.findByIdAndUpdate(req.params.id, req.body);
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -87,24 +77,39 @@ app.put("/employees/:id", async (req, res) => {
 });
 
 
-/* DELETE ONE EMPLOYEE */
+// -------------------- DELETE ONE EMPLOYEE --------------------
 app.delete("/employees/:id", async (req, res) => {
     try {
-        await Employee.findOneAndDelete({ _id: req.params.id });
+        await Employee.findByIdAndDelete(req.params.id);
         res.json({ success: true });
     } catch (err) {
-        res.status(500).json(err);
+        res.status(500).json({ error: err.message });
     }
 });
 
-/* DELETE ALL EMPLOYEES */
+// -------------------- DELETE ALL EMPLOYEES --------------------
 app.delete("/employees", async (req, res) => {
     try {
         await Employee.deleteMany({});
         res.json({ success: true });
     } catch (err) {
-        res.status(500).json(err);
+        res.status(500).json({ error: err.message });
     }
 });
 
-app.listen(3000, () => console.log("Server running on port 3000"));
+// -------------------- LOGIN --------------------
+app.post("/login", async (req, res) => {
+    const { name, email, password } = req.body;
+    const employee = await Employee.findOne({ name, email });
+
+    if (employee && password === employee.password) {
+        res.json({ success: true, employee });
+    } else {
+        res.status(401).json({ success: false, message: "Invalid login details" });
+    }
+});
+
+
+// -------------------- START SERVER --------------------
+const PORT = 3000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
