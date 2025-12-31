@@ -99,15 +99,36 @@ app.delete("/employees", async (req, res) => {
 
 // -------------------- LOGIN --------------------
 app.post("/login", async (req, res) => {
-    const { name, email, password } = req.body;
-    const employee = await Employee.findOne({ name, email });
+    try {
+        const { name, email, password } = req.body;
+        const employee = await Employee.findOne({ name, email });
 
-    if (employee && password === employee.password) {
-        res.json({ success: true, employee });
-    } else {
-        res.status(401).json({ success: false, message: "Invalid login details" });
+        if (!employee) {
+            return res.status(401).json({ success: false, message: "User not found" });
+        }
+
+        const isMatch = await bcrypt.compare(password, employee.password);
+
+        if (!isMatch) {
+            return res.status(401).json({ success: false, message: "Wrong password" });
+        }
+
+        res.json({
+            success: true,
+            employee: {
+                _id: employee._id,
+                name: employee.name,
+                email: employee.email,
+                officecode: employee.officecode,
+                jobTitle: employee.jobTitle,
+                profile: employee.profile
+            }
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
 });
+
 
 
 // -------------------- START SERVER --------------------

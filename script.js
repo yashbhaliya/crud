@@ -1,6 +1,7 @@
 const API = "http://localhost:3000/employees";
 let isSubmitting = false;
 
+
 const addbtn = document.querySelector("#add-btn");
 const modal = document.querySelector(".modal");
 const closeBtn = document.querySelector(".close-icon");
@@ -280,7 +281,7 @@ function openViewModal(emp, isEdit = false) {
     document.getElementById("view-E-mail").value = emp.email;
 
     // IMPORTANT: password field EMPTY
-    document.getElementById("view-Password").value = "";
+    document.getElementById("view-Password").value = emp.password;
     document.getElementById("view-Password").type = "password";
 
     document.getElementById("view-Office-Code").value = emp.officecode;
@@ -302,3 +303,11 @@ function openViewModal(emp, isEdit = false) {
 
 // -------------------- ON LOAD --------------------
 window.onload = getDataFromDB;
+window.addEventListener("DOMContentLoaded", () => {
+    const emp = JSON.parse(localStorage.getItem("loggedEmployee"));
+
+    if (emp) {
+        openViewModal(emp, false);   // open view modal
+        localStorage.removeItem("loggedEmployee");
+    }
+});
