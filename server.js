@@ -2,6 +2,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 
+
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: "5mb" }));
@@ -99,33 +100,44 @@ app.delete("/employees", async (req, res) => {
 
 // -------------------- LOGIN --------------------
 app.post("/login", async (req, res) => {
+    console.log("LOGIN BODY:", req.body);
+
     try {
-        const { name, email, password } = req.body;
-        const employee = await Employee.findOne({ name, email });
+        const { email, password } = req.body;
+
+        // Find employee by email
+        const employee = await Employee.findOne({ email });
 
         if (!employee) {
-            return res.status(401).json({ success: false, message: "User not found" });
+            return res.status(401).json({
+                success: false,
+                message: "Employee not found"
+            });
         }
 
-        const isMatch = await bcrypt.compare(password, employee.password);
-
-        if (!isMatch) {
-            return res.status(401).json({ success: false, message: "Wrong password" });
+        // ❌ Plain text password comparison
+        if (employee.password !== password) {
+            return res.status(401).json({
+                success: false,
+                message: "Incorrect password"
+            });
         }
+
+        // ❗ Do not send password to frontend
+        const empData = employee.toObject();
+        delete empData.password;
 
         res.json({
             success: true,
-            employee: {
-                _id: employee._id,
-                name: employee.name,
-                email: employee.email,
-                officecode: employee.officecode,
-                jobTitle: employee.jobTitle,
-                profile: employee.profile
-            }
+            employee: empData
         });
+
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        console.error("LOGIN ERROR:", err);
+        res.status(500).json({
+            success: false,
+            message: "Server error"
+        });
     }
 });
 

@@ -18,12 +18,11 @@ form.onsubmit = async (e) => {
 
         const data = await res.json();
 
-        if (!data.success) {
-            swal("Login Failed", data.message, "error");
+        if (!res.ok) {
+            swal("Login Failed", data.message || "Login error", "error");
             return;
         }
 
-        // ✅ STORE LOGGED-IN EMPLOYEE
         localStorage.setItem("loggedEmployee", JSON.stringify(data.employee));
 
         swal("Success", "Login successful", "success")
@@ -32,6 +31,7 @@ form.onsubmit = async (e) => {
             });
 
     } catch (err) {
-        swal("Error", "Server error", "error");
+        console.error("LOGIN FETCH ERROR:", err);
+        swal("Error", "Server not running or API error", "error");
     }
 };
